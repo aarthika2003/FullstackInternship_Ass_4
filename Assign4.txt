@@ -1,0 +1,446 @@
+NOTE TAKING APP:
+
+
+
+App.js:
+
+import React from 'react';
+import NoteList from './components/NoteList';
+
+const App = () => {
+    return (
+        <div className="App">
+            <h1>Note-Taking App</h1>
+            <NoteList />
+        </div>
+    );
+};
+
+export default App;
+
+
+
+APP.CSS:
+
+
+
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+FONTEND:
+
+
+NOTE SERVICE.js;
+
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/api/notes';
+
+export const getNotes = async () => {
+    return await axios.get(API_URL);
+};
+
+export const getNoteById = async (id) => {
+    return await axios.get(`${API_URL}/${id}`);
+};
+
+export const createNote = async (note) => {
+    return await axios.post(API_URL, note);
+};
+
+export const updateNote = async (id, note) => {
+    return await axios.put(`${API_URL}/${id}`, note);
+};
+
+export const deleteNote = async (id) => {
+    return await axios.delete(`${API_URL}/${id}`);
+};
+
+
+
+COMPONENTS:
+
+
+ADDNOTE.js;
+
+
+import React, { useState } from 'react';
+import axios from 'axios';
+import './styles.css';
+
+const AddNote = ({ fetchNotes }) => {
+    const [title, setTitle] = useState('');
+    const [content, setContent] = useState('');
+
+    const addNote = async () => {
+        try {
+            await axios.post('http://localhost:5000/api/notes', { title, content });
+            setTitle('');
+            setContent('');
+            fetchNotes();
+        } catch (err) {
+            console.error('Error adding note:', err);
+        }
+    };
+
+    return (
+        <div className='note-form'>
+            <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Title"
+            />
+            <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Content"
+            ></textarea>
+            <button onClick={addNote}>Add Note</button>
+        </div>
+    );
+};
+
+export default AddNote;
+
+
+
+NOTEITEM.js:
+
+
+import React, { useState } from 'react';
+import axios from 'axios';
+import './styles.css';
+
+const NoteItem = ({ note, fetchNotes }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [title, setTitle] = useState(note.title);
+    const [content, setContent] = useState(note.content);
+
+    const updateNote = async () => {
+        try {
+            await axios.put(`http://localhost:5000/api/notes/${note._id}`, { title, content });
+            setIsEditing(false);
+            fetchNotes();
+        } catch (err) {
+            console.error('Error updating note:', err);
+        }
+    };
+
+    const deleteNote = async () => {
+        try {
+            await axios.delete(`http://localhost:5000/api/notes/${note._id}`);
+            fetchNotes();  // Assuming this function correctly updates your notes list
+        } catch (err) {
+            console.error('Error deleting note:', err);
+            if (err.response) {
+                console.error('Server Error:', err.response.data.message);
+            }
+        }
+    };
+    
+
+
+    return (
+        <div className='note'>
+            {isEditing ? (
+                <div className='note-form'>
+                    <input
+                        type="text"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                    />
+                    <textarea
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                    ></textarea>
+                    <button onClick={updateNote}>Save</button>
+                    <button onClick={() => setIsEditing(false)}>Cancel</button>
+                </div>
+            ) : (
+                <div>
+                    <h3>{note.title}</h3>
+                    <p>{note.content}</p>
+                    <button onClick={() => setIsEditing(true)}>Edit</button>
+                    <button onClick={deleteNote}>Delete</button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default NoteItem;
+
+
+
+NOTELIST.js:
+
+
+
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import NoteItem from './NoteItem';
+import AddNote from './AddNote';
+import './styles.css';
+
+const NoteList = () => {
+    const [notes, setNotes] = useState([]);
+
+    const fetchNotes = async () => {
+        try {
+            const response = await axios.get('http://localhost:5000/api/notes');
+            setNotes(response.data);
+        } catch (err) {
+            console.error('Error fetching notes:', err);
+        }
+    };
+
+    useEffect(() => {
+        fetchNotes();
+    }, []);
+
+    return (
+        <div className='container'>
+            <h1>Notes</h1>
+            <AddNote fetchNotes={fetchNotes} />
+            {notes.map((note) => (
+                <NoteItem key={note._id} note={note} fetchNotes={fetchNotes} />
+            ))}
+        </div>
+    );
+};
+
+export default NoteList;
+
+
+
+styles.css:
+
+
+
+/* styles.css */
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+}
+
+.note {
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.note h3 {
+    margin-top: 0;
+    color: #555;
+}
+
+.note p {
+    color: #777;
+}
+
+.note button {
+    margin-right: 10px;
+    padding: 5px 10px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.note button:hover {
+    background-color: #0056b3;
+}
+
+.note-form {
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.note-form input[type="text"],
+.note-form textarea {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    box-sizing: border-box;
+}
+
+.note-form button {
+    padding: 8px 15px;
+    background-color: #28a745;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.note-form button:hover {
+    background-color: #218838;
+}
+
+
+
+BACKEND:
+
+
+Node.js:
+
+const mongoose = require('mongoose');
+
+const noteSchema = new mongoose.Schema({
+    title: { type: String, required: true },
+    content: { type: String, required: true }
+});
+
+module.exports = mongoose.model('Note', noteSchema);
+
+
+routes:
+
+
+const express = require('express');
+const router = express.Router();
+const Note = require('../models/Note');
+
+// Middleware to get a note by ID
+async function getNote(req, res, next) {
+    try {
+        const note = await Note.findById(req.params.id);
+        if (!note) {
+            return res.status(404).json({ message: 'Note not found' });
+        }
+        res.note = note;  // Attach note to response object
+        next();
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+}
+
+// Get all notes
+router.get('/notes', async (req, res) => {
+    try {
+        const notes = await Note.find();
+        res.json(notes);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Get a note by ID
+router.get('/notes/:id', getNote, (req, res) => {
+    res.json(res.note);
+});
+
+// Create a new note
+router.post('/notes', async (req, res) => {
+    const { title, content } = req.body;
+    const newNote = new Note({ title, content });
+    try {
+        const savedNote = await newNote.save();
+        res.status(201).json(savedNote);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// Update a note by ID
+router.put('/notes/:id', getNote, async (req, res) => {
+    const { title, content } = req.body;
+    if (title != null) {
+        res.note.title = title;
+    }
+    if (content != null) {
+        res.note.content = content;
+    }
+    try {
+        const updatedNote = await res.note.save();
+        res.json(updatedNote);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// Delete a note by ID
+router.delete('/notes/:id', getNote, async (req, res) => {
+    try {
+        const deletedNote = await Note.findByIdAndDelete(res.note._id);
+        if (!deletedNote) {
+          return res.status(404).json({ message: 'Note not found' });
+        }
+        res.json({ message: 'Deleted Note' });
+      } catch (err) {
+        console.error('Error deleting note:', err);
+        res.status(500).json({ message: 'Failed to delete note' });
+      }
+});
+
+
+
+module.exports = router;
+
+
+
+
